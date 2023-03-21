@@ -33,25 +33,36 @@ def filterMutations(MutationProfile,isDeleterious,isCOSMIChotspot,isTCGAhotspot)
 
     return nested_Mutations
 
-def affected_pathway_finder(MutationSet,justOncoPaths=False):
+def affected_pathway_finder(MutationSet,justOncoPaths=False,rawCountScore=False):
     with open("/Users/ugur.sahin/PycharmProjects/TumorCharacterization/dbs/indexed_ConsensusPDB.json", "r") as indexed_ConsensusPBD_fl:
         indexed_ConsensusPBD = json.load(indexed_ConsensusPBD_fl)
 
-    affected_pathways_for_sample = list()
-    for mutation in MutationSet:
-        gene = mutation.split("_")[0]
+    affected_pathways_for_sample, definedMutations_toPathways = list(), dict()
+    for Mutation in MutationSet:
+        Gene = Mutation.split("_")[0]
         try:
-            affected_pathways_for_sample.extend(indexed_ConsensusPBD[gene])
+            objectedMutation_ofPatway = indexed_ConsensusPBD[Gene]
+            affected_pathways_for_sample.extend(objectedMutation_ofPatway)
         except:
-            #print("There is no Any defined path to this Gene.")
-            pass
-    return Counter(affected_pathways_for_sample)
+            continue
 
-"""
+        if not rawCountScore:
+            from src.Network_score import main_disruption_rateGraph
+
+            for Pathway in objectedMutation_ofPatway:
+                if Pathway not in definedMutations_toPathways:
+                    definedMutations_toPathways[Pathway] = []
+                definedMutations_toPathways[Pathway].append(Gene)
+
+    if rawCountScore:
+        return Counter(affected_pathways_for_sample)
+    else:
+        return main_disruption_rateGraph(definedMutations_toPathways)
+
+
 if __name__ != '__main__':
-    with open("../misc/ACH-000219.json","r") as case_json_fl:
+    with open("../example/ACH-000219.json","r") as case_json_fl:
         case_features = json.load(case_json_fl)
 
-    filteredMutations = filterMutations(case_features["MutationProfile"])
-    affected_pathway_finder(filteredMutations)
-"""
+    filteredMutations = filterMutations(case_features["MutationProfile"],True,False,False)
+    print(affected_pathway_finder(filteredMutations))
