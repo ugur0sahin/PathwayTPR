@@ -6,7 +6,7 @@ This project is designed to identify disrupted pathways from tumor samples. The 
 
 To install PathwayTPR, follow these steps:
 
-Clone the repository from Github: git clone https://github.com/your_username/PathwayTPR.git
+Clone the repository from Github: git clone https://github.com/ugur0sahin/PathwayTPR.git
 Navigate to the project directory: cd PathwayTPR
 Install the required dependencies: pip install -r requirements.txt
 Usage
