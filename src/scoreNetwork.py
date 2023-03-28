@@ -1,15 +1,98 @@
+import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 from misc.network_pathway_integrator import drawGraph
 
- if plot_show is not None:
-     nx.draw(G, with_labels=True, node_color='lightblue', font_weight='bold', node_size=500)
-     plt.show()
+"""
+==========================================================================================
+Section0 : Defining Score Models to Measure Affect of Mutations into the Mutated Pathways
+==========================================================================================
+
+All Mutations introduced into the pathways cause disruptions of the Hubs, decreases Flow and Reachability,
+Mutations takes places varied Genes(Nodes) have varied degree impacts to Pathways.
+
+#Model 1 -> Betweeness Centrality for each node in both WTGraph and MTGraph, you can compare their values
+to understand the changes in the pathways. A significant change in the betweenness centrality of a gene (node) may indicate
+that the mutation has altered the gene's role within the pathway, affecting the overall information flow and functionality of the system.
+
+#Model 2 -> Flow change between WTGraph and MTGraph, by measuring the difference in average shortest path
+lengths between nodes in the two graphs.The resulting value, called "flow change," indicates the change in 
+how easily nodes can communicate with each other in the mutated graph compared to the healthy graph. A positive 
+change suggests that the flow between nodes is slower in the mutated graph, mwhich may indicate a significant impact
+of the mutation on the pathway.
+
+#Model 3 -> The kernel_similarity function calculates the similarity between two pathway graphs using graph kernel methods
+(Euclidean, Manhattan, RBF). It compares feature vectors based on topological properties and returns similarity scores for
+each kernel to assess structural differences.
+
+"""
+
+def Model1_betweenness_centrality(Gpre, Gpost):
+     Gpre_betweenness, Gpost_betweenness, change_ratios = nx.betweenness_centrality(Gpre), nx.betweenness_centrality(Gpost), {}
+     for Gene in Gpre_betweenness:
+         if Gene in Gpost_betweenness:
+             WTvalue = Gpre_betweenness[Gene]
+             MTvalue = Gpost_betweenness[Gene]
+             try:
+                 dChange = (MTvalue - WTvalue) / WTvalue
+             except:
+                 dChange = 0
+             change_ratios[Gene] = dChange
+
+     return sum(list(change_ratios.values()))
+
+def Model2_flow_change_w_average_shortest_path(Gpre, Gpost):
+
+    def ASPlen(Graph):
+        if nx.is_connected(Graph):
+           return nx.ASPlen(Graph)
+        else:
+           components, lengths = nx.connected_components(Graph), list()
+           for component in components:
+               subGraph = Graph.subgraph(component)
+               lengths.append(nx.average_shortest_path_length(subGraph))
+           return sum(lengths) / len(lengths)
+
+    def flow_change(Gpre, Gpost):
+        Gpre_AVGShortestPath, Gpost_AVGShortestPath = ASPlen(Gpre), ASPlen(Gpost)
+
+        return Gpost_AVGShortestPath - Gpre_AVGShortestPath
+
+    return flow_change(Gpre, Gpost)
 
 
-def sort_Pathways_based_on_importance(definedMutations_toPathways):
-    #It will return just the important Pathways to be considered.
-    return None #definedMutations_toPathways_filtered
+def Model3_kernel_similarity(Gpre, Gpost, distanceMetric=None):
+    def euclidean_distance(vec1, vec2):
+        return np.sqrt(np.sum((vec1 - vec2) ** 2))
+
+    def manhattan_distance(vec1, vec2):
+        return np.sum(np.abs(vec1 - vec2))
+
+    unique_nodes = sorted(set(Gpre.nodes()).union(set(Gpost.nodes())))
+
+    healthy_vector = np.array([1 if node in Gpre.nodes() else 0 for node in unique_nodes])
+    mutated_vector = np.array([1 if node in Gpost.nodes() else 0 for node in unique_nodes])
+
+    if distanceMetric == 'kernelSimilarityEuclidian':
+        return euclidean_distance(healthy_vector, mutated_vector)
+    elif distanceMetric == 'kernelSimilarityManhattan':
+        return manhattan_distance(healthy_vector, mutated_vector)
+    else:
+        raise ValueError("Invalid distanceMetric. Supported values are 'euclidean' and 'manhattan'.")
+
+
+"""
+==========================================================================================
+Section1 : Prepared Mutated Pathways through Knocking-out Mutated Nodes from the Pathway(s).
+==========================================================================================
+
+# main_disruption_rateGraph() is a roof function contains subfunctions denoted below, 
+|                                              It is directly called in the Other modules fully spans this script.
+|
+|----> # callPathwayGraphlet_toremoveNodes() is responsible to finding Pathways of interested, after it removes Mutated Nodes.
+|----> # disruption_score_indicator() is responsible to scoring Graphs of Pathways based on chosen measuring Model.
+
+"""
 
 def callPathwayGraphlet_toremoveNodes(Pathway, tobe_removedNode_ls):
     #It will give outputs as preGraph and removed(processed)Graph
@@ -17,35 +100,55 @@ def callPathwayGraphlet_toremoveNodes(Pathway, tobe_removedNode_ls):
 
     try:
         Gpre = nx.read_gexf("../dbs/Graphlets/"+Graphlet_flname) #call Pathway and define into NetworkX Graph
-        Gpro = Gpre.copy()
+        Gpost = Gpre.copy()
 
         # Remove nodes from Graphlet
-        Gpro.remove_nodes_from(tobe_removedNode_ls)
+        Gpost.remove_nodes_from(tobe_removedNode_ls)
     except:
         pass
 
     return Gpre,Gpost
 
 def disruption_score_indicator(Gpre,Gpost,differentiationIndicatorModel="Default"):
-    if differentiationIndicatorModel == "Default":
-        return None # Score
-    else:
-        return None #Score
+    if differentiationIndicatorModel == "betweennessCentrality":
+        return Model1_betweenness_centrality(Gpre, Gpost)
+
+    elif differentiationIndicatorModel == "flowChangeASP":
+        return Model2_flow_change_w_average_shortest_path(Gpre, Gpost)
+
+    elif "kernelSimilarity" in differentiationIndicatorModel:
+
+        if differentiationIndicatorModel == "kernelSimilarityEuclidian":
+           return Model3_kernel_similarity(Gpre, Gpost, distanceMetric="kernelSimilarityEuclidian")
+        else:
+           return Model3_kernel_similarity(Gpre, Gpost, distanceMetric="kernelSimilarityManhattan")
 
 
-def main_disruption_rateGraph(tobe_removedNodes_definedPathways)
+def main_disruption_rateGraph(tobe_removedNodes_definedPathways, differentiationIndicatorModel="kernelSimilarityEuclidian"):
     # Not actually filtered!
     definedMutations_toPathways_filtered = tobe_removedNodes_definedPathways
 
     Pathway_disruption_rates = dict()
     for Pathway, tobe_removedNode_ls in definedMutations_toPathways_filtered.items():
-        Gpre, Gpro = callPathwayGraphlet_toremoveNodes(Pathway, tobe_removedNode_ls)
-        Pathway_disruption_rates[Pathway] = disruption_score_indicator(Gpre,Gpro,
-                                                                       differentiationIndicatorModel="Default")
+     try:
+            Gpre, Gpost = callPathwayGraphlet_toremoveNodes(Pathway, tobe_removedNode_ls)
+            Pathway_disruption_rates[Pathway] = disruption_score_indicator(Gpre,Gpost,
+                                                                           differentiationIndicatorModel=differentiationIndicatorModel)
+            print(Pathway, disruption_score_indicator(Gpre,Gpost,
+                                                                       differentiationIndicatorModel=differentiationIndicatorModel))
+     except:
+      pass
 
     return Pathway_disruption_rates
 
-if __name__ != '__main__':
+
+"""
+==========================================================================================
+Section2 : CONTROL w/ main.
+==========================================================================================
+"""
+
+if __name__ == '__main__':
     tobe_removedNodes_definedPathways = {'Spinal Cord Injury': ['ACAN'], 'Endochondral Ossification': ['ACAN'],
      'Endochondral Ossification with Skeletal Dysplasias': ['ACAN'], 'Keratan sulfate biosynthesis': ['ACAN'],
      'Keratan sulfate/keratin metabolism': ['ACAN'], 'Glycosaminoglycan metabolism': ['ACAN'],
@@ -626,6 +729,7 @@ if __name__ != '__main__':
      'Arachidonic acid metabolism': ['HPGD', 'HPGD'], 'Prostaglandin formation from arachidonate': ['HPGD'],
      'Prostaglandin formation from dihomo gama-linoleic acid': ['HPGD'], 'Synthesis of Lipoxins (LX)': ['HPGD'],
      'Biosynthesis of D-series resolvins': ['HPGD'], 'Biosynthesis of DHA-derived SPMs': ['HPGD']}
+    print(main_disruption_rateGraph(tobe_removedNodes_definedPathways))
 
 
 
