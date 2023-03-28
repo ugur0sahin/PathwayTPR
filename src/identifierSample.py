@@ -33,7 +33,7 @@ def filterMutations(MutationProfile,isDeleterious,isCOSMIChotspot,isTCGAhotspot)
 
     return nested_Mutations
 
-def affected_pathway_finder(MutationSet,justOncoPaths=False,rawCountScore=False):
+def affected_pathway_finder(MutationSet,justOncoPaths=False,rawCountScore=False, differentiationIndicatorModel="Default"):
     with open("/Users/ugur.sahin/PycharmProjects/TumorCharacterization/dbs/indexed_ConsensusPDB.json", "r") as indexed_ConsensusPBD_fl:
         indexed_ConsensusPBD = json.load(indexed_ConsensusPBD_fl)
 
@@ -47,7 +47,7 @@ def affected_pathway_finder(MutationSet,justOncoPaths=False,rawCountScore=False)
             continue
 
         if not rawCountScore:
-            from src.Network_score import main_disruption_rateGraph
+            from src.scoreNetwork import main_disruption_rateGraph
 
             for Pathway in objectedMutation_ofPatway:
                 if Pathway not in definedMutations_toPathways:
@@ -57,7 +57,7 @@ def affected_pathway_finder(MutationSet,justOncoPaths=False,rawCountScore=False)
     if rawCountScore:
         return Counter(affected_pathways_for_sample)
     else:
-        return main_disruption_rateGraph(definedMutations_toPathways)
+        return main_disruption_rateGraph(definedMutations_toPathways, differentiationIndicatorModel="Default")
 
 
 if __name__ != '__main__':
