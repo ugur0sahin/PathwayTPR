@@ -31,13 +31,13 @@ def Pathway_parser(PathwayDBS):
         Pathway_defined_HugoSymb[row["pathway"]] = row["hgnc_symbol_ids"].split(",")
     return Pathway_defined_HugoSymb
 
-HIPPIE_dbs, CPDB_dbs = pd.read_csv("../dbs/HIPPIE-2.2.mitab.txt",delimiter="\t"), \
-                       pd.read_csv("../dbs/CPDB_pathways_genes.tsv",delimiter="\t")
+HIPPIE_dbs, CPDB_dbs = pd.read_csv("dbs/HIPPIE-2.2.mitab.txt",delimiter="\t"), \
+                       pd.read_csv("dbs/CPDB_pathways_genes_KEGG_WikiPath.tsv",delimiter="\t")
 
 def drawGraph(G,Pathway_name,saveGraphML=None, plot_show = None):
     if saveGraphML is not None:
         try:
-            nx.write_gexf(G,"../dbs/Graphlets/"+Pathway_name.replace(" ","_")+".gexf")
+            nx.write_gexf(G,"dbs/Graphlets/"+Pathway_name.replace(" ","_")+".gexf")
         except:
             print(Pathway_name)
 
