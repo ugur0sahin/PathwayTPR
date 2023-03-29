@@ -60,7 +60,6 @@ def Model2_flow_change_w_average_shortest_path(Gpre, Gpost):
 
     return flow_change(Gpre, Gpost)
 
-
 def Model3_kernel_similarity(Gpre, Gpost, distanceMetric=None):
     def euclidean_distance(vec1, vec2):
         return np.sqrt(np.sum((vec1 - vec2) ** 2))
