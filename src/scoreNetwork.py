@@ -99,7 +99,7 @@ def callPathwayGraphlet_toremoveNodes(Pathway, tobe_removedNode_ls):
     Graphlet_flname = str(Pathway).replace(" ", "_") + ".gexf"
 
     try:
-        Gpre = nx.read_gexf("../dbs/Graphlets/"+Graphlet_flname) #call Pathway and define into NetworkX Graph
+        Gpre = nx.read_gexf("dbs/Graphlets/"+Graphlet_flname) #call Pathway and define into NetworkX Graph
         Gpost = Gpre.copy()
 
         # Remove nodes from Graphlet
@@ -137,7 +137,7 @@ def main_disruption_rateGraph(tobe_removedNodes_definedPathways, differentiation
             print(Pathway, disruption_score_indicator(Gpre,Gpost,
                                                                        differentiationIndicatorModel=differentiationIndicatorModel))
      except:
-      pass
+            pass
 
     return Pathway_disruption_rates
 
@@ -164,14 +164,14 @@ def notation_multiply_coeff_value(removeNode, tunedCoefficients, definedNodesImp
     # Every iteration indicates FeatureNCoefficient x ChosenNodes_value
     for Feature in tunedCoefficients.keys():
         try:
-            score_summation_ls.append(tunedCoefficients[Feature] * definedNodesImportance[Feature][removeNode])
-            return sum(score_summation_ls)
+            score_summation_ls.append((1/tunedCoefficients[Feature]) * definedNodesImportance[Feature][removeNode])
 
         except:
-            print(removeNode+" is not defined into the Pathway.")
-            return 0
+            print(removeNode + " is not defined into the Pathway.")
             break
 
+
+    return sum(score_summation_ls)
 
 def calculate_affectMutation_intoPathway(Pathway, tobe_removedNode_ls):
      # Already calculated coefficients w/ KS Analyse for defined Pathway
@@ -189,7 +189,7 @@ def calculate_affectMutation_intoPathway(Pathway, tobe_removedNode_ls):
          nodeScore_byAllFeatures = notation_multiply_coeff_value(removeNode, tunedCoefficients, definedNodesImportance)
          disrupted_score_ofAll_removedNodeS[removeNode] = nodeScore_byAllFeatures
      # Last state of disrupted_score_ofAll_removedNodeS be like -> {"MutA":0.3212, ...., "MutN":0.7543}
-     return sum(list(disrupted_score_ofAll_removedNodeS.values()))
+     return format(float(sum(list(disrupted_score_ofAll_removedNodeS.values()))),".6g")
 
 
 
@@ -199,6 +199,7 @@ Section3 : CONTROL w/ main.
 ==========================================================================================
 """
 
+'''
 if __name__ == '__main__':
     tobe_removedNodes_definedPathways = {'Spinal Cord Injury': ['ACAN'], 'Endochondral Ossification': ['ACAN'],
      'Endochondral Ossification with Skeletal Dysplasias': ['ACAN'], 'Keratan sulfate biosynthesis': ['ACAN'],
@@ -789,15 +790,14 @@ if __name__ == '__main__':
        print(main_disruption_rateGraph(tobe_removedNodes_definedPathways))
 
     else:
-       Pathway = "Extracellular matrix organization"
-       tobe_removedNode_ls = ['ACAN','CAPN15','CAPN2'] #Note -> There are Mutations defined into the pathway before,
+       Pathway = "TCR signaling in na&#xef;ve CD4+ T cells"
+       #tobe_removedNode_ls = ['ACAN','CAPN15','CAPN2'] #Note -> There are Mutations defined into the pathway before,
                                                # although not present in the .gexf Graph (for this example CAPN15) SOLVE IT !
 
        # or
        # Pathway = "Extracellular matrix organization"
-       # tobe_removedNode_ls = tobe_removedNodes_definedPathways[Pathway]
+       tobe_removedNode_ls = tobe_removedNodes_definedPathways[Pathway]
 
        #Just Involved Pathway and Removed (Mutated) Nodes
        print(Pathway ,calculate_affectMutation_intoPathway(Pathway, tobe_removedNode_ls))
-
-
+'''
