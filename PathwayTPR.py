@@ -23,8 +23,6 @@ args = parser.parse_args()
 
 
 def main():
-    with open("dbs/indexed_ConsensusPDB.json", "r") as indexed_ConsensusPBD_fl:
-        indexed_ConsensusPBD = json.load(indexed_ConsensusPBD_fl)
 
     with open(args.Sample,"r") as case_json_fl:
         case_features = json.load(case_json_fl)
