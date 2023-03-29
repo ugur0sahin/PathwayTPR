@@ -3,3 +3,7 @@
 dbs/CCLE_mutations.csv
 dbs/DepMap-2018q3-celllines.csv
 dbs/CPDB_pathways_genes.tsv
+dbs/.DS_Store
+dbs/Graphlets/
+misc/tmp_trial.py
+.DS_Store
