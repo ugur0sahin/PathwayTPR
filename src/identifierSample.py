@@ -33,8 +33,10 @@ def filterMutations(MutationProfile,isDeleterious,isCOSMIChotspot,isTCGAhotspot)
 
     return nested_Mutations
 
-def affected_pathway_finder(MutationSet,justOncoPaths=False,rawCountScore=False, differentiationIndicatorModel="Default"):
-    with open("/Users/ugur.sahin/PycharmProjects/TumorCharacterization/dbs/indexed_ConsensusPDB.json", "r") as indexed_ConsensusPBD_fl:
+def affected_pathway_finder(MutationSet,justOncoPaths=False,ScoreBaseModel=1, differentiationIndicatorModel="Default"):
+    from src.scoreNetwork import main_disruption_rateGraph
+
+    with open("dbs/indexed_ConsensusPDB.json", "r") as indexed_ConsensusPBD_fl:
         indexed_ConsensusPBD = json.load(indexed_ConsensusPBD_fl)
 
     affected_pathways_for_sample, definedMutations_toPathways = list(), dict()
@@ -46,7 +48,7 @@ def affected_pathway_finder(MutationSet,justOncoPaths=False,rawCountScore=False,
         except:
             continue
 
-        if not rawCountScore:
+        if ScoreBaseModel != 1:
             from src.scoreNetwork import main_disruption_rateGraph
 
             for Pathway in objectedMutation_ofPatway:
@@ -54,15 +56,26 @@ def affected_pathway_finder(MutationSet,justOncoPaths=False,rawCountScore=False,
                     definedMutations_toPathways[Pathway] = []
                 definedMutations_toPathways[Pathway].append(Gene)
 
-    if rawCountScore:
+    #print(affected_pathways_for_sample, definedMutations_toPathways)
+    if ScoreBaseModel == 1: #WORKING!
         return Counter(affected_pathways_for_sample)
-    else:
-        return main_disruption_rateGraph(definedMutations_toPathways, differentiationIndicatorModel="Default")
 
+    elif ScoreBaseModel == 2:#NOT WORKING YET!
+        return main_disruption_rateGraph(definedMutations_toPathways, differentiationIndicatorModel=differentiationIndicatorModel)
 
+    elif ScoreBaseModel == 3:
+        from src.scoreNetwork import calculate_affectMutation_intoPathway
+        Counter_Analog_dict = dict()
+        for Pathway, MutationSet in definedMutations_toPathways.items():
+            returnedScore = calculate_affectMutation_intoPathway(Pathway, MutationSet)
+            print(Pathway,len(MutationSet) , returnedScore)
+            Counter_Analog_dict[Pathway] = returnedScore
+
+"""
 if __name__ != '__main__':
     with open("../example/ACH-000219.json","r") as case_json_fl:
         case_features = json.load(case_json_fl)
 
     filteredMutations = filterMutations(case_features["MutationProfile"],True,False,False)
     print(affected_pathway_finder(filteredMutations))
+"""
