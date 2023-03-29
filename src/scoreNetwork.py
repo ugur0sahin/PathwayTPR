@@ -1,11 +1,11 @@
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
-from misc.network_pathway_integrator import drawGraph
+from misc.NetworkPathway_integrator import drawGraph
 
 """
 ==========================================================================================
-Section0 : Defining Score Models to Measure Affect of Mutations into the Mutated Pathways
+Section1A : Defining Score Models to Measure Affect of Mutations into the Mutated Pathways ![Network Based Scoring]!
 ==========================================================================================
 
 All Mutations introduced into the pathways cause disruptions of the Hubs, decreases Flow and Reachability,
@@ -83,7 +83,7 @@ def Model3_kernel_similarity(Gpre, Gpost, distanceMetric=None):
 
 """
 ==========================================================================================
-Section1 : Prepared Mutated Pathways through Knocking-out Mutated Nodes from the Pathway(s).
+Section1B : Prepared Mutated Pathways through Knocking-out Mutated Nodes from the Pathway(s) ![Network Based Scoring]! .
 ==========================================================================================
 
 # main_disruption_rateGraph() is a roof function contains subfunctions denoted below, 
@@ -141,10 +141,61 @@ def main_disruption_rateGraph(tobe_removedNodes_definedPathways, differentiation
 
     return Pathway_disruption_rates
 
+"""
+==========================================================================================
+Section2 : Calculating Overall Mutation Effects through Collecting of Already prepared Node Importance Database. ![Node Based]!
+==========================================================================================
+
+This section aims to identify important nodes in a biological network by comparing various centrality metrics of the given network with those of random graphs.
+To accomplish this, random graphs are generated with the same number of nodes and edges as the original graph, and betweenness centrality is calculated for each node in
+both the original and random graphs. Subsequently, the Kolmogorov-Smirnov (KS) test is applied to compare the betweenness centrality values of the original network nodes
+with those of the random graphs. By performing Monte Carlo simulations, the most optimal KS statistics are determined, which can be utilized to assess the importance of 
+nodes in the biological network.
+
+"""
+
+#### Not Already Prepared ImportanceMatrix then chosen Pathway has to be calculated for now.
+# Then,
+from misc.Node_importance_assigner import buildFeature_analyseMatrix_wMCS_Grand, evaluateNodesImportance_byFeatures, callPathway_tomeasureNode_vitality
+#########
+
+def notation_multiply_coeff_value(removeNode, tunedCoefficients, definedNodesImportance):
+    score_summation_ls = list()
+    # Every iteration indicates FeatureNCoefficient x ChosenNodes_value
+    for Feature in tunedCoefficients.keys():
+        try:
+            score_summation_ls.append(tunedCoefficients[Feature] * definedNodesImportance[Feature][removeNode])
+            return sum(score_summation_ls)
+
+        except:
+            print(removeNode+" is not defined into the Pathway.")
+            return 0
+            break
+
+
+def calculate_affectMutation_intoPathway(Pathway, tobe_removedNode_ls):
+     # Already calculated coefficients w/ KS Analyse for defined Pathway
+     # are assigned into tunedCoefficients as Feature:Coefficient dict.
+     tunedCoefficients = buildFeature_analyseMatrix_wMCS_Grand(Pathway)
+
+     #Responsible the call Graph from name of Pathway and
+     # find all Features of all Nodes of Graph of Pathway.
+     Gbio = callPathway_tomeasureNode_vitality(Pathway)
+     _, definedNodesImportance = evaluateNodesImportance_byFeatures(Gbio, definedNodeFeatures=True)
+
+     #Every iteration as an evaluation for a Mutation.
+     disrupted_score_ofAll_removedNodeS = dict()
+     for removeNode in tobe_removedNode_ls:
+         nodeScore_byAllFeatures = notation_multiply_coeff_value(removeNode, tunedCoefficients, definedNodesImportance)
+         disrupted_score_ofAll_removedNodeS[removeNode] = nodeScore_byAllFeatures
+     # Last state of disrupted_score_ofAll_removedNodeS be like -> {"MutA":0.3212, ...., "MutN":0.7543}
+     return sum(list(disrupted_score_ofAll_removedNodeS.values()))
+
+
 
 """
 ==========================================================================================
-Section2 : CONTROL w/ main.
+Section3 : CONTROL w/ main.
 ==========================================================================================
 """
 
@@ -729,7 +780,24 @@ if __name__ == '__main__':
      'Arachidonic acid metabolism': ['HPGD', 'HPGD'], 'Prostaglandin formation from arachidonate': ['HPGD'],
      'Prostaglandin formation from dihomo gama-linoleic acid': ['HPGD'], 'Synthesis of Lipoxins (LX)': ['HPGD'],
      'Biosynthesis of D-series resolvins': ['HPGD'], 'Biosynthesis of DHA-derived SPMs': ['HPGD']}
-    print(main_disruption_rateGraph(tobe_removedNodes_definedPathways))
 
+    #### Choose Process ####
+    ScoreBaseModel = 2 #1 corresponds to Graph based disruption score;
+                       #2 corresponds to Node based disruption score.
+
+    if ScoreBaseModel == 1:
+       print(main_disruption_rateGraph(tobe_removedNodes_definedPathways))
+
+    else:
+       Pathway = "Extracellular matrix organization"
+       tobe_removedNode_ls = ['ACAN','CAPN15','CAPN2'] #Note -> There are Mutations defined into the pathway before,
+                                               # although not present in the .gexf Graph (for this example CAPN15) SOLVE IT !
+
+       # or
+       # Pathway = "Extracellular matrix organization"
+       # tobe_removedNode_ls = tobe_removedNodes_definedPathways[Pathway]
+
+       #Just Involved Pathway and Removed (Mutated) Nodes
+       print(Pathway ,calculate_affectMutation_intoPathway(Pathway, tobe_removedNode_ls))
 
 
