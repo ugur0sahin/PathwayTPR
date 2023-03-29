@@ -17,9 +17,9 @@ def run_KS_test(columnVector_forFeature_Gbio, columnVector_forFeature_Grand):
 def callPathway_tomeasureNode_vitality(Pathway):
 	# It will give outputs as preGraph and removed(processed)Graph
 	Graphlet_flname = str(Pathway).replace(" ", "_") + ".gexf"  #Sometimes There is no any Pathway cause the bugs!!
-	return nx.read_gexf("../dbs/Graphlets/" + Graphlet_flname)  # call Pathway and define into NetworkX Graph
+	return nx.read_gexf("dbs/Graphlets/" + Graphlet_flname)  # call Pathway and define into NetworkX Graph
 
-def evaluateNodesImportance_byFeatures(G, NonObjectedFeatures = tuple(), definedNodeFeatures = False):
+def evaluateNodesImportance_byFeatures(G, NonObjectedFeatures =("Subgraph Centrality"), definedNodeFeatures = False):
 	#NonObjectedFeatures is a tuple which contain not consider indicative Features
 	#If there is one or more indicator in this parameter it won't be consider in the Importance scoring of Nodes
 	#! Bug ! -> Inf results are problematic.
