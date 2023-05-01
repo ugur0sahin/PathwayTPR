@@ -1,7 +1,7 @@
+import json
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
-from misc.NetworkPathway_integrator import drawGraph
 
 """
 ==========================================================================================
@@ -45,7 +45,7 @@ def Model2_flow_change_w_average_shortest_path(Gpre, Gpost):
 
     def ASPlen(Graph):
         if nx.is_connected(Graph):
-           return nx.ASPlen(Graph)
+           return nx.average_shortest_path_length((Graph))
         else:
            components, lengths = nx.connected_components(Graph), list()
            for component in components:
@@ -104,6 +104,7 @@ def callPathwayGraphlet_toremoveNodes(Pathway, tobe_removedNode_ls):
         # Remove nodes from Graphlet
         Gpost.remove_nodes_from(tobe_removedNode_ls)
     except:
+        return None
         pass
 
     return Gpre,Gpost
@@ -153,17 +154,14 @@ nodes in the biological network.
 
 """
 
-#### Not Already Prepared ImportanceMatrix then chosen Pathway has to be calculated for now.
-# Then,
 from misc.Node_importance_assigner import buildFeature_analyseMatrix_wMCS_Grand, evaluateNodesImportance_byFeatures, callPathway_tomeasureNode_vitality
-#########
 
 def notation_multiply_coeff_value(removeNode, tunedCoefficients, definedNodesImportance):
     score_summation_ls = list()
     # Every iteration indicates FeatureNCoefficient x ChosenNodes_value
     for Feature in tunedCoefficients.keys():
         try:
-            score_summation_ls.append((1/tunedCoefficients[Feature]) * definedNodesImportance[Feature][removeNode])
+            score_summation_ls.append(tunedCoefficients[Feature] * definedNodesImportance[Feature][removeNode])
 
         except:
             print(removeNode + " is not defined into the Pathway.")
@@ -172,15 +170,25 @@ def notation_multiply_coeff_value(removeNode, tunedCoefficients, definedNodesImp
 
     return sum(score_summation_ls)
 
-def calculate_affectMutation_intoPathway(Pathway, tobe_removedNode_ls):
+def calculate_affectMutation_intoPathway(Pathway, tobe_removedNode_ls, already_recordedPathway_dbs=True):
      # Already calculated coefficients w/ KS Analyse for defined Pathway
      # are assigned into tunedCoefficients as Feature:Coefficient dict.
-     tunedCoefficients = buildFeature_analyseMatrix_wMCS_Grand(Pathway)
+
+     if already_recordedPathway_dbs:
+        tunedCoefficients = json.load(open("dbs/recordCoefficient_ofPathways.json","r"))[Pathway]
+
+     else:
+        tunedCoefficients, _ = buildFeature_analyseMatrix_wMCS_Grand(Pathway)
+        print(tunedCoefficients)
 
      #Responsible the call Graph from name of Pathway and
      # find all Features of all Nodes of Graph of Pathway.
      Gbio = callPathway_tomeasureNode_vitality(Pathway)
-     _, definedNodesImportance = evaluateNodesImportance_byFeatures(Gbio, definedNodeFeatures=True)
+
+     if already_recordedPathway_dbs:
+         definedNodesImportance = json.load(open("dbs/recordGbio_definedNodeFeatures.json","r"))[Pathway]
+     else:
+        _, definedNodesImportance = evaluateNodesImportance_byFeatures(Gbio, definedNodeFeatures=True)
 
      #Every iteration as an evaluation for a Mutation.
      disrupted_score_ofAll_removedNodeS = dict()
@@ -189,8 +197,6 @@ def calculate_affectMutation_intoPathway(Pathway, tobe_removedNode_ls):
          disrupted_score_ofAll_removedNodeS[removeNode] = nodeScore_byAllFeatures
      # Last state of disrupted_score_ofAll_removedNodeS be like -> {"MutA":0.3212, ...., "MutN":0.7543}
      return format(float(sum(list(disrupted_score_ofAll_removedNodeS.values()))),".6g")
-
-
 
 """
 ==========================================================================================
