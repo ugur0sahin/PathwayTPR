@@ -1,11 +1,13 @@
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-
+import json
 import numpy as np
 import pandas as pd
 import networkx as nx
 from scipy.linalg import expm
 from scipy.stats import ks_2samp
+
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=RuntimeWarning)
 
 
 def run_KS_test(columnVector_forFeature_Gbio, columnVector_forFeature_Grand):
@@ -19,7 +21,7 @@ def callPathway_tomeasureNode_vitality(Pathway):
 	Graphlet_flname = str(Pathway).replace(" ", "_") + ".gexf"  #Sometimes There is no any Pathway cause the bugs!!
 	return nx.read_gexf("dbs/Graphlets/" + Graphlet_flname)  # call Pathway and define into NetworkX Graph
 
-def evaluateNodesImportance_byFeatures(G, NonObjectedFeatures =("Subgraph Centrality"), definedNodeFeatures = False):
+def evaluateNodesImportance_byFeatures(G, NonObjectedFeatures = (), definedNodeFeatures = False):
 	#NonObjectedFeatures is a tuple which contain not consider indicative Features
 	#If there is one or more indicator in this parameter it won't be consider in the Importance scoring of Nodes
 	#! Bug ! -> Inf results are problematic.
@@ -46,7 +48,7 @@ def evaluateNodesImportance_byFeatures(G, NonObjectedFeatures =("Subgraph Centra
 			definedNodeFeature_values["Betweenness Centrality"] = degree_centralityNodes
 
 	if 'Eigenvector Centrality' not in NonObjectedFeatures:
-		eigenvector_centrality = nx.eigenvector_centrality(G)
+		eigenvector_centrality = nx.eigenvector_centrality_numpy(G)
 		ObjectedFeatures_return['Eigenvector Centrality'] = list(eigenvector_centrality.values())
 
 		if definedNodeFeatures is True:
@@ -77,16 +79,19 @@ def evaluateNodesImportance_byFeatures(G, NonObjectedFeatures =("Subgraph Centra
 	return ObjectedFeatures_return, definedNodeFeature_values
 
 
-def buildFeature_analyseMatrix_wMCS_Grand(Pathway,numberSimulation=10):
+def buildFeature_analyseMatrix_wMCS_Grand(Pathway,numberSimulation=10,definedNodeFeatures=False):
 		Gbio,ks_statistics_forFeatures = callPathway_tomeasureNode_vitality(Pathway), list()
-		"""Gbio.remove_nodes_from(list(nx.isolates(Gbio)))"""
-		FeaturesGbio_ofNodes, _ = evaluateNodesImportance_byFeatures(Gbio)
+		Gbio.remove_nodes_from(list(nx.isolates(Gbio)))
+		if len(Gbio.nodes) ==0:
+			return dict()
+
+		FeaturesGbio_ofNodes, Gbio_definedNodeFeatures = evaluateNodesImportance_byFeatures(Gbio, definedNodeFeatures=definedNodeFeatures)
 
 		for _ in range(numberSimulation):
 			# Generate a random barabasi Graph with the same number of Nodes and Edges as Gbio
 			average_degree = sum([degree for node, degree in Gbio.degree()]) / len(Gbio.nodes())
 			Grand = nx.barabasi_albert_graph(Gbio.number_of_nodes(), int(average_degree))
-			"""Grand.remove_nodes_from(list(nx.isolates(Grand)))"""
+			Grand.remove_nodes_from(list(nx.isolates(Grand)))
 			# Calculate overall Nodes' Features (like betweenness centrality, etc) for Gbio and Grand, output is Feature defined lists.
 			FeaturesGrand_ofNodes, _ = evaluateNodesImportance_byFeatures(Grand)
 
@@ -110,9 +115,22 @@ def buildFeature_analyseMatrix_wMCS_Grand(Pathway,numberSimulation=10):
 		for Feature in list(FeaturesGbio_ofNodes.keys()):
 			KS_coefficients[Feature] = np.mean(MC_simulationMatrix[Feature])
 
-		return KS_coefficients
+		return KS_coefficients, Gbio_definedNodeFeatures
 
+if __name__ == '__main__':
+	recordCoefficient, recordGbio_definedNodeFeatures =dict(),\
+													   dict()
 
-if __name__ != '__main__':
-    #print(buildFeature_analyseMatrix_wMCS_Grand('Generic Transcription Pathway'))
-	pass
+	for index,row in pd.read_csv("dbs/CPDB_pathways_genes_KEGG_WikiPath.tsv",delimiter="\t").iterrows():
+		try:
+			KS_coefficients_ofPathway, Gbio_definedNodeFeatures_ofPathway = buildFeature_analyseMatrix_wMCS_Grand(row["pathway"],
+												  definedNodeFeatures=True)
+			recordCoefficient[row["pathway"]],recordGbio_definedNodeFeatures[row["pathway"]] = KS_coefficients_ofPathway,\
+																							   Gbio_definedNodeFeatures_ofPathway
+
+		except:
+			print(index,"There is a problem in -> ", row["pathway"])
+
+	recordCoefficient_ofPathways_file, recordGbio_definedNodeFeatures_file  = open("dbs/recordCoefficient_ofPathways.json","w"),\
+																			  open("dbs/recordGbio_definedNodeFeatures.json","w")
+	json.dump(recordCoefficient,recordCoefficient_ofPathways_file), json.dump(recordGbio_definedNodeFeatures, recordGbio_definedNodeFeatures_file)
