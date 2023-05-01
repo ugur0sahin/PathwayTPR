@@ -14,12 +14,12 @@ def index_re_gene2pathway():
                                  for _, row in ConsensusPDB.iterrows() if gene in row["hgnc_symbol_ids"].split(",")]
                           for gene in Overall_gene_set}
 
-    with open("../dbs/indexed_ConsensusPDB.json", "w") as indexed_CPDB_fl:
+    with open("dbs/indexed_ConsensusPDB.json", "w") as indexed_CPDB_fl:
         json.dump(belonged_path_dict,indexed_CPDB_fl)
 
     return None
 
-ConsensusPDB = pd.read_csv('../dbs/CPDB_pathways_genes_KEGG_WikiPath.tsv',delimiter="\t")
+ConsensusPDB = pd.read_csv('dbs/CPDB_pathways_genes_KEGG_WikiPath.tsv',delimiter="\t")
 
 if __name__ == '__main__':
     index_re_gene2pathway()
