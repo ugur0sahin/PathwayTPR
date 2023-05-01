@@ -17,26 +17,29 @@ def render_case_row(Profile_dbs, Tumor_Barcode, MutationProfile):
     return rendered_case_dict
 
 if __name__ == '__main__':
-
-    mutation_profile_of_Sample, chosen_sample_ID= dict(),\
-                                                  "ACH-000005"
-    for index, row in CCLE_mutation_dbs[CCLE_mutation_dbs["DepMap_ID"] == chosen_sample_ID].iterrows():
+    for chosen_sample_ID in list(set(CCLE_mutation_dbs["DepMap_ID"].to_list())):
         try:
-            mutation_profile_of_Sample[row["Hugo_Symbol"]+"_"+str(row["Protein_Change"]).split(".")[1]] = {"isDeleterious":row["isDeleterious"],
-                                                                            "isTCGAhotspot":row["isTCGAhotspot"],
-                                                                            "TCGAhsCnt":row["TCGAhsCnt"],
-                                                                            "isCOSMIChotspot":row["isCOSMIChotspot"],
-                                                                            "COSMIChsCnt":row["COSMIChsCnt"]}
+            mutation_profile_of_Sample= dict()
+            for index, row in CCLE_mutation_dbs[CCLE_mutation_dbs["DepMap_ID"] == chosen_sample_ID].iterrows():
+                try:
+                    mutation_profile_of_Sample[row["Hugo_Symbol"]+"_"+str(row["Protein_Change"]).split(".")[1]] = {"isDeleterious":row["isDeleterious"],
+                                                                                    "isTCGAhotspot":row["isTCGAhotspot"],
+                                                                                    "TCGAhsCnt":row["TCGAhsCnt"],
+                                                                                    "isCOSMIChotspot":row["isCOSMIChotspot"],
+                                                                                    "COSMIChsCnt":row["COSMIChsCnt"]}
 
+                except:
+                    mutation_profile_of_Sample[str(row["Hugo_Symbol"])+"_InDel"] = {"isDeleterious":row["isDeleterious"],
+                                                                                    "isTCGAhotspot":row["isTCGAhotspot"],
+                                                                                    "TCGAhsCnt":row["TCGAhsCnt"],
+                                                                                    "isCOSMIChotspot":row["isCOSMIChotspot"],
+                                                                                    "COSMIChsCnt":row["COSMIChsCnt"]}
+
+            sample_file = open("../example/"+str(chosen_sample_ID)+".json","w")
+            json.dump(render_case_row(DepMap_Cellines_dbs,chosen_sample_ID,mutation_profile_of_Sample),sample_file)
+            sample_file.close()
         except:
-            mutation_profile_of_Sample[str(row["Hugo_Symbol"])+"_InDel"] = {"isDeleterious":row["isDeleterious"],
-                                                                            "isTCGAhotspot":row["isTCGAhotspot"],
-                                                                            "TCGAhsCnt":row["TCGAhsCnt"],
-                                                                            "isCOSMIChotspot":row["isCOSMIChotspot"],
-                                                                            "COSMIChsCnt":row["COSMIChsCnt"]}
-
-    sample_file = open(chosen_sample_ID+".json","w")
-    json.dump(render_case_row(DepMap_Cellines_dbs,chosen_sample_ID,mutation_profile_of_Sample),sample_file)
+            print(chosen_sample_ID)
 
 
 
