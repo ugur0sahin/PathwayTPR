@@ -1,6 +1,5 @@
 import pandas as pd
 import networkx as nx
-import matplotlib.pyplot as plt
 
 
 def checkPathway_Interactome_compatability(objectedPathway,G):
@@ -41,9 +40,9 @@ def drawGraph(G,Pathway_name,saveGraphML=None, plot_show = None):
         except:
             print(Pathway_name)
 
-    if plot_show is not None:
-        nx.draw(G, with_labels=True, node_color='lightblue', font_weight='bold', node_size=500)
-        plt.show()
+    #if plot_show is not None:
+    #    nx.draw(G, with_labels=True, node_color='lightblue', font_weight='bold', node_size=500)
+    #    plt.show()
 
 if __name__ == '__main__':
 
